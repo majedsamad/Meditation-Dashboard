@@ -5,9 +5,11 @@ import pandas as pd
 # Format: Start Date, End Date, and Avg Hours per day during that period
 habit_phases = [
     # (Start, End, Hours_Per_Day)
-    ("2023-01-01", "2023-03-31", 0.5),  # Early year: 30 mins/day
-    ("2023-04-01", "2023-06-14", 1.0),  # Pre-retreat ramp up: 1 hour/day
-    ("2023-06-26", "2023-12-31", 0.75), # Post-retreat maintenance: 45 mins
+    ("2009-07-01", "2012-03-01", 0.25),
+    ("2012-03-01", "2012-12-31", 2),
+    ("2013-01-01", "2022-12-31", 0.25),
+    ("2023-01-01", "2023-12-31", 1),
+    ("2024-01-01", "2025-12-31", 2),
 ]
 
 # --- PROCESSING ---

@@ -28,7 +28,8 @@ for _, row in df_retreats.iterrows():
         retreat_daily_rows.append({
             "Date": d, 
             "Hours": 12.0,  # Assumption: 12 hours/day on retreat
-            "Type": "Retreat"
+            "Type": "Retreat",
+            "Kind": row["Kind"] # Include Sat vs Served
         })
 
 df_retreat_expanded = pd.DataFrame(retreat_daily_rows)
@@ -36,35 +37,40 @@ df_retreat_expanded = pd.DataFrame(retreat_daily_rows)
 # --- 3. MERGE & AGGREGATE TO MONTHLY ---
 
 # Combine Daily Log + Expanded Retreats
-df_combined = pd.concat([df_daily, df_retreat_expanded])
+# We only need the common columns for the combined total
+df_combined = pd.concat([df_daily, df_retreat_expanded], ignore_index=True)
 
 # Set Date as index to allow resampling
-df_combined = df_combined.set_index("Date")
-
-# >>>> THE NEW STEP: Resample to Month Start ('MS') <<<<
-# We sum the hours for every month.
-df_monthly = df_combined.resample("MS")[["Hours"]].sum().reset_index()
+# This is mainly for the "Total Life" calculations
+df_monthly_total = df_combined.set_index("Date").resample("MS")[["Hours"]].sum().reset_index()
 
 # Calculate Cumulative Sum on the MONTHLY data
-df_monthly["Cumulative Hours"] = df_monthly["Hours"].cumsum()
+df_monthly_total["Cumulative Hours"] = df_monthly_total["Hours"].cumsum()
 
-# Calculate Rolling Average (e.g., 6-month moving average of monthly hours)
-df_monthly["6-Month Avg"] = df_monthly["Hours"].rolling(window=6).mean()
+# --- 4. PREPARE RETREATS SPECIFIC DATA ---
+# Aggregate retreats by Month and Kind (Sat vs Served)
+if not df_retreat_expanded.empty:
+    df_retreats_monthly = df_retreat_expanded.groupby(
+        [pd.Grouper(key="Date", freq="MS"), "Kind"]
+    )[["Hours"]].sum().reset_index()
+else:
+    df_retreats_monthly = pd.DataFrame(columns=["Date", "Kind", "Hours"])
 
-# --- 4. VISUALIZATION ---
+
+# --- 5. VISUALIZATION ---
 
 st.title("🧘 Long-Term Meditation History")
 
 # Top Metrics
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric("Total Life Hours", f"{df_monthly['Hours'].sum():,.0f}")
+    st.metric("Total Life Hours", f"{df_monthly_total['Hours'].sum():,.0f}")
 with col2:
     st.metric("Total Retreats", len(df_retreats))
 with col3:
     # Calculate average yearly hours
-    years = (df_monthly["Date"].max() - df_monthly["Date"].min()).days / 365.25
-    avg_annual = df_monthly["Hours"].sum() / years
+    years = (df_monthly_total["Date"].max() - df_monthly_total["Date"].min()).days / 365.25
+    avg_annual = df_monthly_total["Hours"].sum() / years
     st.metric("Avg Hours / Year", f"{avg_annual:,.0f}")
 
 st.divider()
@@ -72,7 +78,7 @@ st.divider()
 # Chart 1: Cumulative Progress (Area Chart)
 st.subheader("Cumulative Hours (17 Years)")
 fig_cum = px.area(
-    df_monthly, 
+    df_monthly_total, 
     x="Date", 
     y="Cumulative Hours",
     title="Total Accumulated Practice",
@@ -80,25 +86,34 @@ fig_cum = px.area(
 )
 st.plotly_chart(fig_cum, use_container_width=True)
 
-# Chart 2: Monthly Consistency (Bar Chart)
-st.subheader("Monthly Activity Volume")
-# We can overlay the rolling average to show trends
+# Chart 2: Retreats Over Time
+st.subheader("Retreats Over Time")
+
+# Define specific colors
+color_map = {
+    "Sat": "#5D3FD3",    # Deep Purple
+    "Served": "#FF4B4B"  # Red/Orange
+}
+
 fig_vol = px.bar(
-    df_monthly,
+    df_retreats_monthly,
     x="Date",
     y="Hours",
-    title="Hours per Month",
-    color_discrete_sequence=["#A9A9A9"], # Grey for bars
-    opacity=0.6
+    title="Retreats over time",
+    color="Kind",
+    color_discrete_map=color_map,
+    opacity=0.9
 )
 
-# Add the trendline
-fig_vol.add_scatter(
-    x=df_monthly["Date"], 
-    y=df_monthly["6-Month Avg"], 
-    mode='lines', 
-    name='6-Month Trend',
-    line=dict(color='#FF4B4B', width=3)
+# Move legend inside the chart
+fig_vol.update_layout(
+    legend=dict(
+        yanchor="top",
+        y=0.99,
+        xanchor="left",
+        x=0.01,
+        bgcolor="rgba(255, 255, 255, 0.5)"
+    )
 )
 
 st.plotly_chart(fig_vol, use_container_width=True)
