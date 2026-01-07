@@ -25,9 +25,13 @@ for _, row in df_retreats.iterrows():
     r_dates = pd.date_range(start=row["Start"], end=row["End"] - pd.Timedelta(days=1))
     
     for d in r_dates:
+        # Determine hours based on retreat kind
+        # Served = 4 hours (light practice), Sat = 12 hours (intense practice)
+        daily_hours = 4.0 if row["Kind"] == "Served" else 12.0
+        
         retreat_daily_rows.append({
             "Date": d, 
-            "Hours": 12.0,  # Assumption: 12 hours/day on retreat
+            "Hours": daily_hours, 
             "Type": "Retreat",
             "Kind": row["Kind"] # Include Sat vs Served
         })
@@ -61,17 +65,49 @@ else:
 
 st.title("🧘 Long-Term Meditation History")
 
+# Calculate Breakdowns
+total_hours = df_monthly_total['Hours'].sum()
+daily_hours = df_daily['Hours'].sum()
+if not df_retreat_expanded.empty:
+    sat_hours = df_retreat_expanded[df_retreat_expanded["Kind"] == "Sat"]["Hours"].sum()
+    served_hours = df_retreat_expanded[df_retreat_expanded["Kind"] == "Served"]["Hours"].sum()
+else:
+    sat_hours = 0
+    served_hours = 0
+
 # Top Metrics
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
-    st.metric("Total Life Hours", f"{df_monthly_total['Hours'].sum():,.0f}")
+    st.metric("Total Life Hours", f"{total_hours:,.0f}")
 with col2:
-    st.metric("Total Retreats", len(df_retreats))
+    st.metric("Daily Practice", f"{daily_hours:,.0f}")
 with col3:
+    st.metric("Retreats (Sat)", f"{sat_hours:,.0f}")
+with col4:
+    st.metric("Retreats (Served)", f"{served_hours:,.0f}")
+with col5:
     # Calculate average yearly hours
     years = (df_monthly_total["Date"].max() - df_monthly_total["Date"].min()).days / 365.25
     avg_annual = df_monthly_total["Hours"].sum() / years
     st.metric("Avg Hours / Year", f"{avg_annual:,.0f}")
+
+st.divider()
+
+# Retreat Counts by Type
+st.subheader("Retreat Breakdown")
+unique_retreats = sorted(df_retreats["Name"].unique())
+cols = st.columns(len(unique_retreats))
+
+for idx, r_name in enumerate(unique_retreats):
+    # Filter for this specific retreat name
+    df_subset = df_retreats[df_retreats["Name"] == r_name]
+    
+    # Count Sat vs Served
+    sat_count = len(df_subset[df_subset["Kind"] == "Sat"])
+    served_count = len(df_subset[df_subset["Kind"] == "Served"])
+    
+    with cols[idx]:
+        st.metric(r_name, f"{sat_count} Sat / {served_count} Served")
 
 st.divider()
 
