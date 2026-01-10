@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from streamlit_js_eval import streamlit_js_eval
 
 st.set_page_config(page_title="Majed's Meditation Analytics", layout="wide")
 
@@ -160,6 +161,16 @@ fig_single.update_layout(
         title=""
     )
 )
+
+# Responsive Zoom for Mobile
+screen_width = streamlit_js_eval(js_expressions='window.innerWidth', key='SCR_WIDTH')
+
+# Default to "zoomed out" (show everything)
+# If mobile (< 768px), default to showing only the last few years
+if screen_width is not None and screen_width < 768:
+    max_date = df_retreats["Start"].max() + pd.Timedelta(days=30) # A bit of buffer
+    min_date = max_date - pd.DateOffset(years=3) # Show last 3 years
+    fig_single.update_xaxes(range=[min_date, max_date])
 
 st.plotly_chart(fig_single, use_container_width=True)
 
