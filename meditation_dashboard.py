@@ -142,7 +142,7 @@ fig_single.add_scatter(
 
 fig_single.update_layout(
     height=250, # Compact height
-    yaxis_title="",
+    yaxis=dict(visible=False), # Hide "Retreats" label to save space
     xaxis_title="Date",
     xaxis=dict(
         tickmode="linear",
@@ -172,7 +172,7 @@ if screen_width is not None and screen_width < 768:
     min_date = max_date - pd.DateOffset(years=3) # Show last 3 years
     fig_single.update_xaxes(range=[min_date, max_date])
 
-st.plotly_chart(fig_single, use_container_width=True)
+st.plotly_chart(fig_single, width='stretch')
 
 st.divider()
 
@@ -217,7 +217,7 @@ fig_cum = px.area(
     title="Total Accumulated Practice",
     color_discrete_sequence=["#5D3FD3"]
 )
-st.plotly_chart(fig_cum, use_container_width=True)
+st.plotly_chart(fig_cum, width='stretch')
 
 st.subheader("Retreat Locations")
 
@@ -227,7 +227,7 @@ if "Duration_Days" not in df_retreats.columns:
     df_retreats["Duration_Days"] = (df_retreats["End"] - df_retreats["Start"]).dt.days
 
 # Create the map
-fig_map = px.scatter_mapbox(
+fig_map = px.scatter_map(
     df_retreats,
     lat="Lat",
     lon="Lon",
@@ -245,4 +245,4 @@ fig_map = px.scatter_mapbox(
 fig_map.update_layout(mapbox_style="open-street-map")
 fig_map.update_layout(margin={"r":0,"t":40,"l":0,"b":0}) # Tight margins
 
-st.plotly_chart(fig_map, use_container_width=True)
+st.plotly_chart(fig_map, width='stretch')
