@@ -230,28 +230,99 @@ st.divider()
 
 st.subheader("Retreat Locations")
 
-# We need the 'Duration_Days' for the bubble size. 
-# If it wasn't saved in the CSV, recalculate it quickly:
+# Ensure Duration_Days exists
 if "Duration_Days" not in df_retreats.columns:
     df_retreats["Duration_Days"] = (df_retreats["End"] - df_retreats["Start"]).dt.days
 
-# Create the map
+# Aggregate by location and center: total days and build a detailed breakdown for hover
+def build_location_summary(group):
+    total_days = group["Duration_Days"].sum()
+    center = group["Center"].iloc[0]  # Get center name (same for all rows in group)
+    
+    # Build breakdown by Name and Kind
+    breakdown_lines = []
+    for (name, kind), sub in group.groupby(["Name", "Kind"]):
+        count = len(sub)
+        breakdown_lines.append(f"{name}: {count} {kind}")
+    
+    breakdown_text = "<br>".join(sorted(breakdown_lines))
+    
+    return pd.Series({
+        "TotalDays": total_days,
+        "Breakdown": breakdown_text,
+        "RetreatCount": len(group),
+        "Center": center
+    })
+
+df_location_agg = df_retreats.groupby(["Lat", "Lon"]).apply(build_location_summary, include_groups=False).reset_index()
+
+# Color palette for centers
+center_colors = {
+    "Dhamma Kunja": "#5D3FD3",      # Deep Purple
+    "Dhamma Vaddhana": "#2E8B57",   # Sea Green
+    "Dhamma Dipa": "#DC143C",       # Crimson
+    "Dhamma Mahavana": "#FF6B35",   # Orange
+    "Dhamma Siri": "#1E90FF",       # Dodger Blue
+}
+
+# Create the map with one circle per location, size by total days, color by center
 fig_map = px.scatter_map(
-    df_retreats,
+    df_location_agg,
     lat="Lat",
     lon="Lon",
-    hover_name="Name",
-    hover_data={"Start": True, "Duration_Days": True, "Lat": False, "Lon": False},
-    size="Duration_Days",       # Bigger bubbles for longer retreats
-    color="Duration_Days",      # Color gradient based on duration
-    color_continuous_scale=px.colors.sequential.Sunsetdark,
-    zoom=1,                     # Start zoomed out to see the world
+    size="TotalDays",
+    size_max=30,  # Max bubble size
+    color="Center",
+    color_discrete_map=center_colors,
+    opacity=0.7,
+    zoom=1,
     height=500,
-    title="Retreat Geography"
+    title="",
+    hover_name="Center",
+    custom_data=["TotalDays", "RetreatCount", "Breakdown"],
+    hover_data={
+        "TotalDays": False,
+        "RetreatCount": False,
+        "Center": False,
+        "Lat": False,
+        "Lon": False
+    }
 )
 
+# Add custom hover template with breakdown - use selector to update only scattermap traces
+for trace in fig_map.data:
+    trace.hovertemplate = (
+        "<b>%{hovertext}</b><br>" +
+        "<b>Total Days:</b> %{customdata[0]}<br>" +
+        "<b>Retreats:</b> %{customdata[1]}<br><br>" +
+        "%{customdata[2]}<extra></extra>"
+    )
+
+# Add text labels for center names using graph_objects
+import plotly.graph_objects as go
+
+fig_map.add_trace(go.Scattermap(
+    lat=df_location_agg["Lat"] - 0.5,  # Offset slightly below the circles
+    lon=df_location_agg["Lon"],
+    mode="text",
+    text=df_location_agg["Center"],
+    textfont=dict(size=12, color="#333333"),
+    showlegend=False,
+    hoverinfo="skip"
+))
+
 # Use 'open-street-map' style (no API key required)
-fig_map.update_layout(mapbox_style="open-street-map")
-fig_map.update_layout(margin={"r":0,"t":40,"l":0,"b":0}) # Tight margins
+fig_map.update_layout(
+    mapbox_style="open-street-map",
+    margin={"r":0,"t":40,"l":0,"b":0},
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="left",
+        x=0,
+        title=""
+    )
+)
 
 st.plotly_chart(fig_map, width='stretch')
