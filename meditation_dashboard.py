@@ -124,6 +124,7 @@ st.plotly_chart(fig_cum, use_container_width=True)
 
 # Chart 2: Retreats Over Time
 st.subheader("Retreats Over Time")
+st.caption("Legend: 🔟 10-day | 8️⃣ Satipatthana | 5️⃣ 10-day (part-time) | 3️⃣ 3-day | 📍 Other")
 
 # Define specific colors
 color_map = {
@@ -131,28 +132,74 @@ color_map = {
     "Served": "#FF4B4B"  # Red/Orange
 }
 
-fig_vol = px.bar(
-    df_retreats_monthly,
-    x="Date",
-    y="Hours",
-    title="Retreats over time",
-    color="Kind",
-    color_discrete_map=color_map,
-    opacity=0.9
+
+# 1. Map Course Names to Icons
+def get_icon(name):
+    # Mapping logic for emojis
+    if "10-day (part-time)" in name:
+        return "5️⃣"
+    elif "10-day" in name:
+        return "🔟"
+    elif "Satipatthana" in name:
+        return "8️⃣"
+    elif "3-day" in name:
+        return "3️⃣"
+    else:
+        return "📍"
+
+# Apply icon mapping
+df_retreats["Icon"] = df_retreats.apply(
+    lambda row: get_icon(row["Name"]), axis=1
 )
 
-# Move legend inside the chart
-fig_vol.update_layout(
+# 2. Create Single Row Timeline
+# We use a timeline for the background bars (duration)
+hover_cols = [c for c in ["Name", "Link", "Location", "Duration_Days"] if c in df_retreats.columns]
+fig_single = px.timeline(
+    df_retreats,
+    x_start="Start",
+    x_end=df_retreats["Start"] + pd.Timedelta(days=20),
+    y=["Retreats"] * len(df_retreats), # Constant value to flatten rows
+    color="Kind",
+    color_discrete_map=color_map,
+    opacity=0.9,
+    hover_data=hover_cols,
+)
+
+# Overlay Icons using Scatter (Text Mode)
+# This ensures icons are always visible regardless of retreat duration
+fig_single.add_scatter(
+    x=df_retreats["Start"] + pd.Timedelta(days=10), # Center the icon
+    y=["Retreats"] * len(df_retreats),
+    mode="text",
+    text=df_retreats["Icon"],
+    textfont=dict(size=20), # Fixed size for visibility
+    showlegend=False,
+    hoverinfo="skip" # Tooltip already provided by the bars
+)
+
+fig_single.update_layout(
+    height=250, # Compact height
+    yaxis_title="",
+    xaxis_title="Date",
+    xaxis=dict(
+        tickmode="linear",
+        tick0="2009-01-01",
+        dtick="M12", # Yearly ticks
+        tickformat="%Y", # Show only the year,
+        showgrid=True,
+        gridcolor="rgba(255,255,255,.1)" # Subtle vertical lines
+    ),
     legend=dict(
-        yanchor="top",
-        y=0.99,
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
         xanchor="left",
-        x=0.01,
-        bgcolor="rgba(255, 255, 255, 0.5)"
+        x=0
     )
 )
 
-st.plotly_chart(fig_vol, use_container_width=True)
+st.plotly_chart(fig_single, use_container_width=True)
 
 # --- NEW: MAP VISUALIZATION ---
 st.divider()
