@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="Meditation Analytics (Monthly)", layout="wide")
+st.set_page_config(page_title="Majed's Meditation Analytics", layout="wide")
 
 # --- 1. LOAD DATA ---
 try:
@@ -65,34 +65,6 @@ else:
 
 st.title("🧘 Long-Term Meditation History")
 
-# Calculate Breakdowns
-total_hours = df_monthly_total['Hours'].sum()
-daily_hours = df_daily['Hours'].sum()
-if not df_retreat_expanded.empty:
-    sat_hours = df_retreat_expanded[df_retreat_expanded["Kind"] == "Sat"]["Hours"].sum()
-    served_hours = df_retreat_expanded[df_retreat_expanded["Kind"] == "Served"]["Hours"].sum()
-else:
-    sat_hours = 0
-    served_hours = 0
-
-# Top Metrics
-col1, col2, col3, col4, col5 = st.columns(5)
-with col1:
-    st.metric("Total Life Hours", f"{total_hours:,.0f}")
-with col2:
-    st.metric("Daily Practice", f"{daily_hours:,.0f}")
-with col3:
-    st.metric("Retreats (Sat)", f"{sat_hours:,.0f}")
-with col4:
-    st.metric("Retreats (Served)", f"{served_hours:,.0f}")
-with col5:
-    # Calculate average yearly hours
-    years = (df_monthly_total["Date"].max() - df_monthly_total["Date"].min()).days / 365.25
-    avg_annual = df_monthly_total["Hours"].sum() / years
-    st.metric("Avg Hours / Year", f"{avg_annual:,.0f}")
-
-st.divider()
-
 # Retreat Counts by Type
 st.subheader("Retreat Breakdown")
 unique_retreats = sorted(df_retreats["Name"].unique())
@@ -111,20 +83,9 @@ for idx, r_name in enumerate(unique_retreats):
 
 st.divider()
 
-# Chart 1: Cumulative Progress (Area Chart)
-st.subheader("Cumulative Hours (17 Years)")
-fig_cum = px.area(
-    df_monthly_total, 
-    x="Date", 
-    y="Cumulative Hours",
-    title="Total Accumulated Practice",
-    color_discrete_sequence=["#5D3FD3"]
-)
-st.plotly_chart(fig_cum, use_container_width=True)
-
 # Chart 2: Retreats Over Time
 st.subheader("Retreats Over Time")
-st.caption("Legend: 🔟 10-day | 8️⃣ Satipatthana | 5️⃣ 10-day (part-time) | 3️⃣ 3-day | 📍 Other")
+st.caption(" 🔟 10-day | 8️⃣ Satipatthana | 5️⃣ 10-day (part-time) | 3️⃣ 3-day")
 
 # Define specific colors
 color_map = {
@@ -193,16 +154,60 @@ fig_single.update_layout(
     legend=dict(
         orientation="h",
         yanchor="bottom",
-        y=1.02,
+        y=1.5,
         xanchor="left",
-        x=0
+        x=0.0,
+        title=""
     )
 )
 
 st.plotly_chart(fig_single, use_container_width=True)
 
-# --- NEW: MAP VISUALIZATION ---
 st.divider()
+
+# Calculate Breakdowns
+total_hours = df_monthly_total['Hours'].sum()
+daily_hours = df_daily['Hours'].sum()
+if not df_retreat_expanded.empty:
+    sat_hours = df_retreat_expanded[df_retreat_expanded["Kind"] == "Sat"]["Hours"].sum()
+    served_hours = df_retreat_expanded[df_retreat_expanded["Kind"] == "Served"]["Hours"].sum()
+else:
+    sat_hours = 0
+    served_hours = 0
+
+
+# Chart 1: Cumulative Progress (Area Chart)
+st.subheader("Cumulative Hours")
+
+# Top Metrics
+col1, col2, col3, col4, col5, col6 = st.columns(6)
+with col1:
+    st.metric("Total Life Hours", f"{total_hours:,.0f}")
+with col2:
+    st.metric("Daily Practice", f"{daily_hours:,.0f}")
+with col3:
+    st.metric("Retreats (Sat)", f"{sat_hours:,.0f}")
+with col4:
+    st.metric("Retreats (Served)", f"{served_hours:,.0f}")
+with col5:
+    # Calculate average yearly hours
+    years = (df_monthly_total["Date"].max() - df_monthly_total["Date"].min()).days / 365.25
+    avg_annual = df_monthly_total["Hours"].sum() / years
+    st.metric("Avg Hours / Year", f"{avg_annual:,.0f}")
+with col6:
+    st.metric("Years of Practice", f"{years:.0f}")
+
+st.divider()
+
+fig_cum = px.area(
+    df_monthly_total, 
+    x="Date", 
+    y="Cumulative Hours",
+    title="Total Accumulated Practice",
+    color_discrete_sequence=["#5D3FD3"]
+)
+st.plotly_chart(fig_cum, use_container_width=True)
+
 st.subheader("Retreat Locations")
 
 # We need the 'Duration_Days' for the bubble size. 
