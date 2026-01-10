@@ -66,9 +66,23 @@ else:
 
 st.title("🧘 Long-Term Meditation History")
 
-# Retreat Counts by Type
+# Retreat Counts by Type with Icons
 st.subheader("Retreat Breakdown")
 unique_retreats = sorted(df_retreats["Name"].unique())
+
+# Map retreat names to icons
+def get_retreat_icon(name):
+    if "10-day (part-time)" in name:
+        return "5️⃣"
+    elif "10-day" in name:
+        return "🔟"
+    elif "Satipatthana" in name:
+        return "8️⃣"
+    elif "3-day" in name:
+        return "3️⃣"
+    else:
+        return "📍"
+
 cols = st.columns(len(unique_retreats))
 
 for idx, r_name in enumerate(unique_retreats):
@@ -79,14 +93,11 @@ for idx, r_name in enumerate(unique_retreats):
     sat_count = len(df_subset[df_subset["Kind"] == "Sat"])
     served_count = len(df_subset[df_subset["Kind"] == "Served"])
     
+    # Get icon for this retreat type
+    icon = get_retreat_icon(r_name)
+    
     with cols[idx]:
-        st.metric(r_name, f"{sat_count} Sat / {served_count} Served")
-
-st.divider()
-
-# Chart 2: Retreats Over Time
-st.subheader("Retreats Over Time")
-st.caption(" 🔟 10-day | 8️⃣ Satipatthana | 5️⃣ 10-day (part-time) | 3️⃣ 3-day")
+        st.metric(f"{icon} {r_name}", f"{sat_count} Sat / {served_count} Served")
 
 # Define specific colors
 color_map = {
@@ -94,8 +105,6 @@ color_map = {
     "Served": "#FF4B4B"  # Red/Orange
 }
 
-
-# 1. Map Course Names to Icons
 def get_icon(name):
     # Mapping logic for emojis
     if "10-day (part-time)" in name:
@@ -208,8 +217,6 @@ with col5:
 with col6:
     st.metric("Years of Practice", f"{years:.0f}")
 
-st.divider()
-
 fig_cum = px.area(
     df_monthly_total, 
     x="Date", 
@@ -218,6 +225,8 @@ fig_cum = px.area(
     color_discrete_sequence=["#5D3FD3"]
 )
 st.plotly_chart(fig_cum, width='stretch')
+
+st.divider()
 
 st.subheader("Retreat Locations")
 
