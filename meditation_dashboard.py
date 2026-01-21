@@ -2,16 +2,17 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from streamlit_js_eval import streamlit_js_eval
+from convert_daily import get_daily_log_df
 
 st.set_page_config(page_title="Majed's Meditation Analytics", layout="wide")
 
 # --- 1. LOAD DATA ---
 try:
     df_retreats = pd.read_csv("retreats.csv")
-    df_daily = pd.read_csv("daily_log.csv")
+    df_daily = get_daily_log_df()  # Generate daily log directly
     df_daily["Type"] = "Daily Practice"
 except FileNotFoundError:
-    st.error("CSV files not found. Please run your conversion scripts first.")
+    st.error("retreats.csv not found. Please ensure the file exists.")
     st.stop()
 
 # Ensure datetime formats
